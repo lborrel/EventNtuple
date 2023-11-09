@@ -81,7 +81,9 @@
 #include "TrkAna/inc/CrvInfoHelper.hh"
 #include "TrkAna/inc/InfoMCStructHelper.hh"
 #include "Offline/RecoDataProducts/inc/RecoQual.hh"
+#include "Offline/RecoDataProducts/inc/MVAResult.hh"
 #include "TrkAna/inc/RecoQualInfo.hh"
+#include "TrkAna/inc/MVAResultInfo.hh"
 #include "TrkAna/inc/BestCrvAssns.hh"
 #include "TrkAna/inc/MCStepInfo.hh"
 
@@ -217,10 +219,12 @@ namespace mu2e {
       std::vector<TrkCaloHitInfo> _allTCHIs;
       // quality branches (inputs)
       std::vector<std::vector<art::Handle<RecoQualCollection> > > _allRQCHs; // outer vector is for each candidate/supplement, inner vector is all RecoQuals
+      std::vector<std::vector<art::Handle<MVAResultCollection> > > _allMVARCHs; // outer vector is for each candidate/supplement, inner vector is all MVAResults
       std::vector<art::Handle<TrkQualCollection> > _allTQCHs; // we will only allow one TrkQual object per candidate/supplement to be fully written out
       std::vector<art::Handle<TrkCaloHitPIDCollection> > _allTCHPCHs; // we will only allow one TrkCaloHitPID object per candidate/supplement to be fully written out
       // quality branches (outputs)
       std::vector<RecoQualInfo> _allRQIs;
+      std::vector<MVAResultInfo> _allMVARIs;
       std::vector<TrkQualInfo> _allTQIs;
       std::vector<TrkPIDInfo> _allTPIs;
       // trigger information
@@ -366,6 +370,8 @@ namespace mu2e {
 
       RecoQualInfo rqi;
       _allRQIs.push_back(rqi);
+      MVAResultInfo mvari;
+      _allMVARIs.push_back(mvari);
       TrkQualInfo tqi;
       _allTQIs.push_back(tqi);
       TrkPIDInfo tpi;
@@ -566,6 +572,17 @@ namespace mu2e {
         }
       }
       _allRQCHs.push_back(selectedRQCHs);
+
+      // also create the MVA results branches
+      std::vector<art::Handle<MVAResultCollection> > MVAResultCollHandles;
+      std::vector<art::Handle<MVAResultCollection> > selectedMVARCHs;
+      selectedMVARCHs = createSpecialBranch(event, i_branchConfig.branch()+"MVA", MVAResultCollHandles, _allMVARIs.at(i_branch), _allMVARIs.at(i_branch)._mvas, true, i_branchConfig.suffix());
+      for (const auto& i_selectedMVARCH : selectedMVARCHs) {
+        if (i_selectedMVARCH->size() != kalSeedCollHandle->size()) {
+          throw cet::exception("TrkAna") << "Sizes of KalSeedCollection and this MVAResultCollection are inconsistent (" << kalSeedCollHandle->size() << " and " << i_selectedMVARCH->size() << " respectively)";
+        }
+      }
+      _allMVARCHs.push_back(selectedMVARCHs);
 
       // TrkQual
       std::string i_trkqual_tag;
@@ -820,6 +837,13 @@ namespace mu2e {
       recoQuals.push_back(recoQualCalib);
     }
     _allRQIs.at(i_branch).setQuals(recoQuals);
+    // all MVAResults
+    std::vector<Float_t> MVAResults; // for the output value
+    for (const auto& i_MVAResultHandle : _allMVARCHs.at(i_branch)) {
+      Float_t MVAResult = i_MVAResultHandle->at(i_kseed)._value;
+      MVAResults.push_back(MVAResult);
+    }
+    _allMVARIs.at(i_branch).setMVA(MVAResults);
     // TrkQual
     std::string trkqual_branch;
     if(_conf.filltrkqual() && branchConfig.options().filltrkqual() && branchConfig.options().trkqual(trkqual_branch)) {
@@ -948,6 +972,7 @@ namespace mu2e {
       if(_fillcalomc)_allMCTCHIs.at(i_branch).reset();
 
       _allRQIs.at(i_branch).reset();
+      _allMVARIs.at(i_branch).reset();
       _allTQIs.at(i_branch).reset();
       _allTPIs.at(i_branch).reset();
 
