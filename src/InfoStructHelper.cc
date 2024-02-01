@@ -18,22 +18,18 @@ namespace mu2e {
       if(shf.hasAllProperties(StrawHitFlag::radsel))++hitcount.nrsel;
       if(shf.hasAllProperties(StrawHitFlag::timesel))++hitcount.ntsel;
       if(shf.hasAllProperties(StrawHitFlag::bkg))++hitcount.nbkg;
-      if(shf.hasAllProperties(StrawHitFlag::trksel))++hitcount.ntpk;
     }
   }
 
   void InfoStructHelper::fillHitCount(RecoCount const& nrec, HitCount& hitcount) {
-    hitcount.nsd = nrec._nstrawdigi;
-    hitcount.ncd = nrec._ncalodigi;
-    hitcount.ncrvd = nrec._ncrvdigi;
     hitcount.nesel = nrec._nshfesel;
     hitcount.nrsel = nrec._nshfrsel;
     hitcount.ntsel = nrec._nshftsel;
     hitcount.nbkg = nrec._nshfbkg;
-    hitcount.ntpk = nrec._nshftpk;
   }
 
   void InfoStructHelper::fillTrkInfo(const KalSeed& kseed,TrkInfo& trkinfo) {
+    trkinfo.reset();
     if(kseed.status().hasAllProperties(TrkFitFlag::kalmanConverged))
       trkinfo.status = 1;
     else if(kseed.status().hasAllProperties(TrkFitFlag::kalmanOK))
@@ -183,10 +179,12 @@ namespace mu2e {
  }
 
   void InfoStructHelper::fillTrkInfoHits(const KalSeed& kseed, TrkInfo& trkinfo) {
-    trkinfo.nhits = trkinfo.nactive = trkinfo.ndouble = trkinfo.ndactive = trkinfo.nplanes = trkinfo.planespan = trkinfo.nnullambig = 0;
     static StrawHitFlag active(StrawHitFlag::active);
     std::set<unsigned> planes;
     uint16_t minplane(0), maxplane(0);
+    static StrawHitFlag allsel("EnergySelection:TimeSelection:RadiusSelection");
+    static StrawHitFlag allrej("Background:Dead:Noisy");
+
     for (auto ihit = kseed.hits().begin(); ihit != kseed.hits().end(); ++ihit) {
       ++trkinfo.nhits;
       if (ihit->strawHitState() > WireHitState::inactive){
@@ -197,6 +195,13 @@ namespace mu2e {
         if (ihit->strawHitState()==WireHitState::null) {
           ++trkinfo.nnullambig;
         }
+        // count active hits by flag state
+        if(ihit->flag().hasAllProperties(StrawHitFlag::energysel))trkinfo.nesel++;
+        if(ihit->flag().hasAllProperties(StrawHitFlag::radsel))trkinfo.nrsel++;
+        if(ihit->flag().hasAllProperties(StrawHitFlag::timesel))trkinfo.ntsel++;
+        if(ihit->flag().hasAllProperties(StrawHitFlag::bkg))trkinfo.nbkg++;
+        if(ihit->flag().hasAllProperties(allsel) && (!ihit->flag().hasAnyProperty(allrej)))trkinfo.nsel++;
+        // these variables are obsolete, use stereo hits instead TODO
         auto jhit = ihit; jhit++;
         if(jhit != kseed.hits().end() && ihit->strawId().uniquePanel() == jhit->strawId().uniquePanel()){
           ++trkinfo.ndouble;
@@ -341,6 +346,7 @@ namespace mu2e {
       tchinfo.poca = tch._cpos;
       tchinfo.mom = tch._tmom;
       tchinfo.cdepth = tch._cdepth;
+      tchinfo.trkdepth = tch._trkdepth;
       tchinfo.doca = tch._udoca;
       tchinfo.dt = tch._udt;
       tchinfo.ptoca = tch._uptoca;
@@ -353,17 +359,11 @@ namespace mu2e {
       tchinfo.csize = cc->size();
       tchinfo.edep = cc->energyDep();
       tchinfo.edeperr = cc->energyDepErr();
+      // compute relative azimuth dot product
+      auto rmomhat = XYZVectorF(tch._tmom.X(),tch._tmom.Y(),0.0).Unit();
+      auto rhohat = XYZVectorF(tch._cpos.X(),tch._cpos.Y(),0.0).Unit();
+      tchinfo.dphidot = rmomhat.Dot(rhohat);
     }
-  }
-
-  void InfoStructHelper::fillTrkQualInfo(const TrkQual& tqual, TrkQualInfo& trkqualInfo) {
-    int n_trkqual_vars = TrkQual::n_vars;
-    for (int i_trkqual_var = 0; i_trkqual_var < n_trkqual_vars; ++i_trkqual_var) {
-      TrkQual::MVA_varindex i_index = TrkQual::MVA_varindex(i_trkqual_var);
-      trkqualInfo.trkqualvars[i_trkqual_var] = tqual[i_index];
-    }
-    trkqualInfo.mvaout = tqual.MVAOutput();
-    trkqualInfo.mvastat = tqual.status();
   }
 
 
