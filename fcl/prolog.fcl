@@ -39,10 +39,11 @@ TrkQualProducersPath : [ TrkQualDeM, TrkQualUeM, TrkQualDmuM, TrkQualDeP, TrkQua
 
 # track PID module
 TrkPID : {
-  module_type : TrackPIDV2
+  module_type : TrackPID
   MaxDE : 5.0 # MeV
   DeltaTOffset : -1.15 # specific to MDC2018h
   MVAConfig : { MVAWeights : "Offline/TrkDiag/data/TrkCaloHitPID.weights.xml"}
+  datFilename : "Offline/TrkDiag/data/TrackPID.dat"
 }
 # this module only makes sense for downstream electron fits
 TrkPIDDeM          : @local::TrkPID
@@ -87,7 +88,7 @@ genCountLogger: { module_type: GenEventCountReader }
 
 AllOpt : {
   fillMC : true
-  trkpid : "TrkPID"
+#  trkpid : "TrkPID"
   fillTrkPID : true
   fillHits : true
   genealogyDepth : -1
@@ -98,6 +99,7 @@ DeM : { input : "KK"
   branch : "dem"
   suffix : "DeM"
   trkQualTag : "TrkQualDeM"
+  trkPIDTag : "TrkPIDDeM"
 }
 UeM : { input : "KK"
   branch : "uem"

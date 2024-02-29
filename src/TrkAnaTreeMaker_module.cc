@@ -74,7 +74,7 @@
 #include "TrkAna/inc/TrkStrawHitInfoMC.hh"
 #include "TrkAna/inc/TrkCaloHitInfo.hh"
 #include "TrkAna/inc/CaloClusterInfoMC.hh"
-#include "TrkAna/inc/TrkPIDInfo.hh"
+//#include "TrkAna/inc/TrkPIDInfo.hh"
 #include "TrkAna/inc/HelixInfo.hh"
 #include "TrkAna/inc/InfoStructHelper.hh"
 #include "TrkAna/inc/CrvInfoHelper.hh"
@@ -108,7 +108,7 @@ namespace mu2e {
         using Comment=fhicl::Comment;
         fhicl::Atom<bool> fillmc{Name("fillMC"), Comment("Switch to turn on filling of MC information for this set of tracks"), false};
         fhicl::Atom<bool> fillhits{Name("fillHits"), Comment("Switch to turn on filling of hit-level information for this set of tracks"), false};
-        fhicl::OptionalAtom<std::string> trkpid{Name("trkpid"), Comment("TrkCaloHitPIDCollection input tag to be written out (use prefix if fcl parameter suffix (e.g. DeM) is defined)")};
+//        fhicl::OptionalAtom<std::string> trkpid{Name("trkpid"), Comment("TrkCaloHitPIDCollection input tag to be written out (use prefix if fcl parameter suffix (e.g. DeM) is defined)")};
         fhicl::Atom<bool> filltrkpid{Name("fillTrkPID"), Comment("Switch to turn on filling of the full TrkPIDInfo for this set of tracks"), false};
         fhicl::Atom<bool> required{Name("required"), Comment("True/false if you require this type of track in the event"), false};
         fhicl::Atom<int> genealogyDepth{Name("genealogyDepth"), Comment("The depth of the genealogy information you want to keep"), 1};
@@ -123,6 +123,7 @@ namespace mu2e {
         fhicl::Atom<std::string> branch{Name("branch"), Comment("Name of output branch")};
         fhicl::Atom<std::string> suffix{Name("suffix"), Comment("Fit suffix (e.g. DeM)"), ""};
         fhicl::Atom<std::string> trkQualTag{Name("trkQualTag"), Comment("Input tag for MVAResultCollection to use for TrkQual"), ""};
+        fhicl::Atom<std::string> trkPIDTag{Name("trkPIDTag"), Comment("Input tag for MVAResultCollection to use for TrkPID"), ""};
         fhicl::Table<BranchOptConfig> options{Name("options"), Comment("Optional arguments for a branch")};
       };
 
@@ -219,10 +220,12 @@ namespace mu2e {
       std::vector<std::vector<art::Handle<RecoQualCollection> > > _allRQCHs; // outer vector is for each candidate/supplement, inner vector is all RecoQuals
       std::vector<art::Handle<TrkCaloHitPIDCollection> > _allTCHPCHs; // we will only allow one TrkCaloHitPID object per candidate/supplement to be fully written out
       std::vector<art::Handle<MVAResultCollection> > _allTrkQualCHs;
+      std::vector<art::Handle<MVAResultCollection> > _allTrkPIDCHs;
       // quality branches (outputs)
       std::vector<RecoQualInfo> _allRQIs;
-      std::vector<TrkPIDInfo> _allTPIs;
+//      std::vector<TrkPIDInfo> _allTPIs;
       std::vector<MVAResultInfo> _allTrkQualResults;
+      std::vector<MVAResultInfo> _allTrkPIDResults;
       // trigger information
       unsigned _trigbits;
       std::map<size_t,unsigned> _tmap; // map between path and trigger ID.  ID should come from trigger itself FIXME!
@@ -366,11 +369,14 @@ namespace mu2e {
 
       RecoQualInfo rqi;
       _allRQIs.push_back(rqi);
-      TrkPIDInfo tpi;
-      _allTPIs.push_back(tpi);
+//      TrkPIDInfo tpi;
+//      _allTPIs.push_back(tpi);
 
       MVAResultInfo tqr;
       _allTrkQualResults.emplace_back(tqr);
+
+      MVAResultInfo tpr;
+      _allTrkPIDResults.emplace_back(tpr);
 
       std::vector<TrkStrawHitInfo> tshi;
       _allTSHIs.push_back(tshi);
@@ -423,19 +429,22 @@ namespace mu2e {
       // TrkCaloHit: currently only 1
       _trkana->Branch((branch+"tch.").c_str(),&_allTCHIs.at(i_branch));
       _trkana->Branch((branch+"trkqual").c_str(), &_allTrkQualResults.at(i_branch));
+//      if (_conf.filltrkpid() && i_branchConfig.options().filltrkpid()) {
+//        int n_trkpid_vars = TrkCaloHitPID::n_vars;
+//        for (int i_trkpid_var = 0; i_trkpid_var < n_trkpid_vars; ++i_trkpid_var) {
+//          TrkCaloHitPID::MVA_varindex i_index =TrkCaloHitPID::MVA_varindex(i_trkpid_var);
+//          std::string varname = TrkCaloHitPID::varName(i_index);
+//          _trkana->Branch((branch+"trkpid."+varname).c_str(), &_allTPIs.at(i_branch)._tchpvars[i_index]);
+//        }
+//        _trkana->Branch((branch+"trkpid.mvaout").c_str(), &_allTPIs.at(i_branch)._mvaout);
+//        _trkana->Branch((branch+"trkpid.mvastat").c_str(), &_allTPIs.at(i_branch)._mvastat);
+//        _trkana->Branch((branch+"trkpid.disk0frad").c_str(), &_allTPIs.at(i_branch)._diskfrad[0]);
+//        _trkana->Branch((branch+"trkpid.disk1frad").c_str(), &_allTPIs.at(i_branch)._diskfrad[1]);
+//        _trkana->Branch((branch+"trkpid.disk0brad").c_str(), &_allTPIs.at(i_branch)._diskbrad[0]);
+//        _trkana->Branch((branch+"trkpid.disk1brad").c_str(), &_allTPIs.at(i_branch)._diskbrad[1]);
+//      }
       if (_conf.filltrkpid() && i_branchConfig.options().filltrkpid()) {
-        int n_trkpid_vars = TrkCaloHitPID::n_vars;
-        for (int i_trkpid_var = 0; i_trkpid_var < n_trkpid_vars; ++i_trkpid_var) {
-          TrkCaloHitPID::MVA_varindex i_index =TrkCaloHitPID::MVA_varindex(i_trkpid_var);
-          std::string varname = TrkCaloHitPID::varName(i_index);
-          _trkana->Branch((branch+"trkpid."+varname).c_str(), &_allTPIs.at(i_branch)._tchpvars[i_index]);
-        }
-        _trkana->Branch((branch+"trkpid.mvaout").c_str(), &_allTPIs.at(i_branch)._mvaout);
-        _trkana->Branch((branch+"trkpid.mvastat").c_str(), &_allTPIs.at(i_branch)._mvastat);
-        _trkana->Branch((branch+"trkpid.disk0frad").c_str(), &_allTPIs.at(i_branch)._diskfrad[0]);
-        _trkana->Branch((branch+"trkpid.disk1frad").c_str(), &_allTPIs.at(i_branch)._diskfrad[1]);
-        _trkana->Branch((branch+"trkpid.disk0brad").c_str(), &_allTPIs.at(i_branch)._diskbrad[0]);
-        _trkana->Branch((branch+"trkpid.disk1brad").c_str(), &_allTPIs.at(i_branch)._diskbrad[1]);
+        _trkana->Branch((branch+"trkpid").c_str(), &_allTrkPIDResults.at(i_branch));
       }
       // optionally add hit-level branches
       // (for the time being diagLevel : 2 will still work, but I propose removing this at some point)
@@ -533,6 +542,7 @@ namespace mu2e {
     _allTCHPCHs.clear();
     _allBestCrvAssns.clear();
     _allTrkQualCHs.clear();
+    _allTrkPIDCHs.clear();
 
     art::Handle<KalHelixAssns> khaH;
     if(_conf.helices()){ // find associated Helices
@@ -554,6 +564,12 @@ namespace mu2e {
       }
       _allTrkQualCHs.emplace_back(trkQualCollHandle);
 
+      art::Handle<MVAResultCollection> trkPIDCollHandle;
+      if (i_branchConfig.trkPIDTag() != "") {
+        event.getByLabel(i_branchConfig.trkPIDTag(),trkPIDCollHandle);
+      }
+      _allTrkPIDCHs.emplace_back(trkPIDCollHandle);
+
       // also create the reco qual branches
       std::vector<art::Handle<RecoQualCollection> > recoQualCollHandles;
       std::vector<art::Handle<RecoQualCollection> > selectedRQCHs;
@@ -566,16 +582,16 @@ namespace mu2e {
       _allRQCHs.push_back(selectedRQCHs);
 
       // TrkCaloHitPID
-      std::string i_trkpid_tag;
-      art::Handle<TrkCaloHitPIDCollection> trkpidCollHandle;
-      if (i_branchConfig.options().trkpid(i_trkpid_tag) && i_branchConfig.options().filltrkpid() && _conf.filltrkpid()) {
-        art::InputTag trkpidInputTag = i_trkpid_tag + i_branchConfig.suffix();
-        event.getByLabel(trkpidInputTag,trkpidCollHandle);
-        if (trkpidCollHandle->size() != kalSeedCollHandle->size()) {
-          throw cet::exception("TrkAna") << "Sizes of KalSeedCollection and TrkCaloHitPIDCollection are inconsistent (" << kalSeedCollHandle->size() << " and " << trkpidCollHandle->size() << " respectively)";
-        }
-      }
-      _allTCHPCHs.push_back(trkpidCollHandle);
+//      std::string i_trkpid_tag;
+//      art::Handle<TrkCaloHitPIDCollection> trkpidCollHandle;
+//      if (i_branchConfig.options().trkpid(i_trkpid_tag) && i_branchConfig.options().filltrkpid() && _conf.filltrkpid()) {
+//        art::InputTag trkpidInputTag = i_trkpid_tag + i_branchConfig.suffix();
+//        event.getByLabel(trkpidInputTag,trkpidCollHandle);
+//        if (trkpidCollHandle->size() != kalSeedCollHandle->size()) {
+//          throw cet::exception("TrkAna") << "Sizes of KalSeedCollection and TrkCaloHitPIDCollection are inconsistent (" << kalSeedCollHandle->size() << " and " << trkpidCollHandle->size() << " respectively)";
+//        }
+//      }
+//      _allTCHPCHs.push_back(trkpidCollHandle);
     }
 
     // trigger information
@@ -802,6 +818,11 @@ namespace mu2e {
       _allTrkQualResults.at(i_branch).result = trkQualHandle->at(i_kseed)._value;
     }
 
+    const auto& trkPIDHandle = _allTrkPIDCHs.at(i_branch);
+    if (trkPIDHandle.isValid()) { // might not have a valid handle
+      _allTrkPIDResults.at(i_branch).result = trkPIDHandle->at(i_kseed)._value;
+    }
+
     // all RecoQuals
     std::vector<Float_t> recoQuals; // for the output value
     for (const auto& i_recoQualHandle : _allRQCHs.at(i_branch)) {
@@ -812,15 +833,15 @@ namespace mu2e {
     }
     _allRQIs.at(i_branch).setQuals(recoQuals);
     // TrkCaloHitPID
-    std::string trkpid_branch;
-    if (_conf.filltrkpid() && branchConfig.options().filltrkpid() && branchConfig.options().trkpid(trkpid_branch)) {
-      const auto& tchpcolH = _allTCHPCHs.at(i_branch);
-      if (tchpcolH.isValid()) {
-        const auto& tchpcol = *tchpcolH;
-        auto const& tpid = tchpcol.at(i_kseed);
-        _infoStructHelper.fillTrkPIDInfo(tpid, kseed, _allTPIs.at(i_branch));
-      }
-    }
+//    std::string trkpid_branch;
+//    if (_conf.filltrkpid() && branchConfig.options().filltrkpid() && branchConfig.options().trkpid(trkpid_branch)) {
+//      const auto& tchpcolH = _allTCHPCHs.at(i_branch);
+//      if (tchpcolH.isValid()) {
+//        const auto& tchpcol = *tchpcolH;
+//        auto const& tpid = tchpcol.at(i_kseed);
+//        _infoStructHelper.fillTrkPIDInfo(tpid, kseed, _allTPIs.at(i_branch));
+//      }
+//    }
     // fill MC info associated with this track
     if(_fillmc && branchConfig.options().fillmc()) {
       const PrimaryParticle& primary = *_pph;
@@ -929,7 +950,7 @@ namespace mu2e {
       if(_fillcalomc)_allMCTCHIs.at(i_branch).reset();
 
       _allRQIs.at(i_branch).reset();
-      _allTPIs.at(i_branch).reset();
+//      _allTPIs.at(i_branch).reset();
 
       // clear vectors
       _allTSHIs.at(i_branch).clear();

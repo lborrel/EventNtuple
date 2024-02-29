@@ -18,7 +18,7 @@ physics :
   analyzers : { @table::TrkAnaReco.analyzers }
 }
 
-physics.TrkAnaTrigPath : [ PBIWeight, TrkQualDeM ]
+physics.TrkAnaTrigPath : [ PBIWeight, TrkQualDeM, TrkPIDDeM ]
 physics.TrkAnaEndPath : [ @sequence::TrkAnaReco.EndSequence ]
 
 # Include more information (MC, full TrkQual and TrkPID branches)
@@ -38,7 +38,7 @@ physics.analyzers.TrkAnaPos.FillCRVHits : true
 physics.analyzers.TrkAnaPos.FillTriggerInfo : false
 physics.analyzers.TrkAnaPos.FitType : LoopHelix
 
-physics.analyzers.TrkAnaNeg.FillTrkPIDInfo : false
+#physics.analyzers.TrkAnaNeg.FillTrkPIDInfo : false
 
 physics.analyzers.TrkAnaPos.FillTrkPIDInfo : false
 
