@@ -561,12 +561,18 @@ namespace mu2e {
       art::Handle<MVAResultCollection> trkQualCollHandle;
       if (i_branchConfig.trkQualTag() != "") {
         event.getByLabel(i_branchConfig.trkQualTag(),trkQualCollHandle);
+        std::cout << "trkPIDCollHandle " << trkQualCollHandle->size() << std::endl;
       }
       _allTrkQualCHs.emplace_back(trkQualCollHandle);
 
       art::Handle<MVAResultCollection> trkPIDCollHandle;
-      if (i_branchConfig.trkPIDTag() != "") {
+      if (i_branchConfig.trkPIDTag() != "" && i_branchConfig.options().filltrkpid() && _conf.filltrkpid()) {
         event.getByLabel(i_branchConfig.trkPIDTag(),trkPIDCollHandle);
+        std::cout << "trkPIDCollHandle " << trkPIDCollHandle->size() << std::endl;
+        std::cout << "kalSeedCollHandle " << kalSeedCollHandle->size() << std::endl;
+        if (trkPIDCollHandle->size() != kalSeedCollHandle->size()) {
+          throw cet::exception("TrkAna") << "Sizes of KalSeedCollection and TrkCaloHitPIDCollection are inconsistent (" << kalSeedCollHandle->size() << " and " << trkPIDCollHandle->size() << " respectively)";
+        }
       }
       _allTrkPIDCHs.emplace_back(trkPIDCollHandle);
 
@@ -818,9 +824,11 @@ namespace mu2e {
       _allTrkQualResults.at(i_branch).result = trkQualHandle->at(i_kseed)._value;
     }
 
-    const auto& trkPIDHandle = _allTrkPIDCHs.at(i_branch);
-    if (trkPIDHandle.isValid()) { // might not have a valid handle
-      _allTrkPIDResults.at(i_branch).result = trkPIDHandle->at(i_kseed)._value;
+    if (_conf.filltrkpid() && branchConfig.options().filltrkpid()) {
+      const auto& trkPIDHandle = _allTrkPIDCHs.at(i_branch);
+      if (trkPIDHandle.isValid()) { // might not have a valid handle
+        _allTrkPIDResults.at(i_branch).result = trkPIDHandle->at(i_kseed)._value;
+      }
     }
 
     // all RecoQuals
